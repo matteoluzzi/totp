@@ -1,17 +1,21 @@
 package main
 
 import (
+	"bufio"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
-	"encoding/binary"
 	"encoding/base32"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 func generate128BitRandomSecret() []byte {
@@ -71,18 +75,61 @@ func dynamicTruncate(hmac []byte) uint32 {
 
 }
 
-func main() {
+func validateTOTP(secret []byte, totp uint32) bool {
+
+	//Generate the current TOTP value based on the secret and the current time, then compare it to the provided TOTP value. If they match, return true; otherwise, return false.
 
 	steps := 30 //30 seconds
 	unixTimestamp := time.Now().Unix()
 
 	numOfSteps := int(math.Floor(float64(unixTimestamp) / float64(steps))) // 8 bytes
-	secret := readOrGenerateSecret()
 
 	buffer := make([]byte, 8) // same as numOfSteps, 8 bytes for uint64
 	binary.BigEndian.PutUint64(buffer, uint64(numOfSteps))
 
 	hmac := computeHMACSHA1(secret, buffer)
 
-	fmt.Printf("TOTP: %d\n", dynamicTruncate(hmac))
+	return dynamicTruncate(hmac) == totp
+}
+
+func main() {
+
+	// Read or generate the secret key
+	secret := readOrGenerateSecret()
+
+	issuer := "MyApp"
+	user := "matteo@example.no"
+
+	// Generate the otpauth URL for QR code generation
+	otpauthURL := fmt.Sprintf("otpauth://totp/%s:%s?secret=%s&issuer=%s&algorithm=SHA1&digits=6&period=30", issuer, user, base32.StdEncoding.EncodeToString(secret), issuer)
+
+	qr, err := qrcode.New(otpauthURL, qrcode.Medium)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate QR code: %v\n", err)
+		panic(err)
+	}
+
+	fmt.Println(qr.ToSmallString(false))
+	fmt.Printf("\nScan the QR code with your authentication app\n")
+	fmt.Print("Enter the OTP from your authenticator app: ")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	b := scanner.Scan()
+	if !b {
+		fmt.Fprintf(os.Stderr, "Failed to read input: %v\n", scanner.Err())
+		return
+	}
+	input := scanner.Text()
+
+	totp, err := strconv.ParseUint(input, 10, 32)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid OTP format: %v\n", err)
+		return
+	}
+
+	if validateTOTP(secret, uint32(totp)) {
+		fmt.Println("Authentication successful!")
+	} else {
+		fmt.Println("Authentication failed! Invalid OTP.")
+	}
 }
