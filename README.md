@@ -39,7 +39,8 @@ go run main.go
 On first run a new secret is generated and saved, then a QR code is printed to
 the terminal:
 
-![TOTP QR code](assets/qrcode-example.png)
+<img width="501" height="653" alt="image" src="https://github.com/user-attachments/assets/9202ff79-a68c-4494-a3c3-fa22313d8eab" />
+
 
 Scan it with an authenticator app (e.g. Google Authenticator), then enter the
 6-digit code shown by the app when prompted by the program, to verify it
