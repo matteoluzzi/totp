@@ -45,4 +45,3 @@ the terminal:
 Scan it with an authenticator app (e.g. Google Authenticator), then enter the
 6-digit code shown by the app when prompted by the program, to verify it
 matches the one computed locally.
-

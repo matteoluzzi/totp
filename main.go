@@ -34,10 +34,9 @@ func computeHMACSHA1(key, message []byte) []byte {
 	return h.Sum(nil)
 }
 
-func readOrGenerateSecret() []byte {
+func readOrGenerateSecret(path string) []byte {
 
 	var secret []byte
-	path := filepath.Join(os.TempDir(), "totp_secret.txt")
 	base32Bytes, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Secret file not found, generating a new secret and saving it to %s\n", path)
@@ -95,7 +94,7 @@ func validateTOTP(secret []byte, totp uint32) bool {
 func main() {
 
 	// Read or generate the secret key
-	secret := readOrGenerateSecret()
+	secret := readOrGenerateSecret(filepath.Join(os.TempDir(), "totp_secret.txt"))
 
 	issuer := "MyApp"
 	user := "matteo@example.no"
