@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/base32"
+	"encoding/binary"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Table driven test style, think JUnit @ParametrizedTest but in Go you have to manually
@@ -72,5 +75,29 @@ func TestReadOrGenerateSecret(t *testing.T) {
 
 	if !bytes.Equal(secret, secretAgain) {
 		t.Errorf("Expected the same secret to be read from the file, but got different values")
+	}
+}
+
+func TestValidateTOTP(t *testing.T) {
+
+	var secret = readOrGenerateSecret(filepath.Join(t.TempDir(), "totp_secret.txt"))
+	var now = time.Now().Unix()
+
+	numOfSteps := int(math.Floor(float64(now) / float64(30)))
+
+	buffer := make([]byte, 8)
+	binary.BigEndian.PutUint64(buffer, uint64(numOfSteps))
+
+	hmac := computeHMACSHA1(secret, buffer)
+
+	otp := dynamicTruncate(hmac)
+
+	if !validateTOTP(secret, otp, now) {
+		t.Errorf("Expected TOTP validation to succeed, but it failed")
+	}
+
+	// Test with an invalid OTP
+	if validateTOTP(secret, otp, now+40) { // Adding 40 seconds to ensure it's a different time step
+		t.Errorf("Expected TOTP validation to fail with an incorrect OTP, but it succeeded")
 	}
 }

@@ -74,14 +74,13 @@ func dynamicTruncate(hmac []byte) uint32 {
 
 }
 
-func validateTOTP(secret []byte, totp uint32) bool {
+func validateTOTP(secret []byte, totp uint32, currentTime int64) bool {
 
 	//Generate the current TOTP value based on the secret and the current time, then compare it to the provided TOTP value. If they match, return true; otherwise, return false.
 
 	steps := 30 //30 seconds
-	unixTimestamp := time.Now().Unix()
 
-	numOfSteps := int(math.Floor(float64(unixTimestamp) / float64(steps))) // 8 bytes
+	numOfSteps := int(math.Floor(float64(currentTime) / float64(steps))) // 8 bytes
 
 	buffer := make([]byte, 8) // same as numOfSteps, 8 bytes for uint64
 	binary.BigEndian.PutUint64(buffer, uint64(numOfSteps))
@@ -126,7 +125,7 @@ func main() {
 		return
 	}
 
-	if validateTOTP(secret, uint32(totp)) {
+	if validateTOTP(secret, uint32(totp), time.Now().Unix()) {
 		fmt.Println("Authentication successful!")
 	} else {
 		fmt.Println("Authentication failed! Invalid OTP.")
